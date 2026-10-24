@@ -22,9 +22,21 @@ For complete architectural details, C API signatures, and SharedArrayBuffer memo
 
 ## Installation
 
+Install directly from GitHub via npm:
+
 ```bash
-npm install canvas-wasi
+npm install github:breeze833/canvas-wasi
+# or specify a tag, branch, or commit:
+npm install github:breeze833/canvas-wasi#main
 ```
+
+Or clone the repository:
+
+```bash
+git clone https://github.com/breeze833/canvas-wasi.git
+```
+
+Prepackaged release assets (`canvas-wasi.tar.gz`, `canvas-wasi.zip`, and npm tarball) are also available on [GitHub Releases](https://github.com/breeze833/canvas-wasi/releases).
 
 ---
 

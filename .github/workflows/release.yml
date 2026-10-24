@@ -1,0 +1,74 @@
+name: CI & GitHub Release
+
+on:
+  push:
+    branches: ["main"]
+    tags: ["v*"]
+  pull_request:
+    branches: ["main"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  test:
+    name: Run Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Run tests
+        run: node test/canvas-wasi.test.js
+
+  release:
+    name: Package & Release
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/'))
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Create release archives
+        run: |
+          npm pack
+          tar -czvf canvas-wasi.tar.gz include src types SPEC.md README.md LICENSE package.json
+          zip -r canvas-wasi.zip include src types SPEC.md README.md LICENSE package.json
+
+      - name: Create or Update GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'latest' }}
+          name: ${{ startsWith(github.ref, 'refs/tags/') && format('Release {0}', github.ref_name) || 'Latest Build' }}
+          body: |
+            ### canvas-wasi Package Release
+
+            Automated package build from commit `${{ github.sha }}`.
+
+            #### Installation
+            ```bash
+            npm install github:breeze833/canvas-wasi
+            ```
+
+            #### Assets
+            - **`canvas-wasi.tar.gz`**: Standalone C headers, ES module sources, and type definitions.
+            - **`canvas-wasi.zip`**: Zip archive for direct inclusion or unzipping into web projects.
+            - **`canvas-wasi-*.tgz`**: Standard npm-compatible package tarball.
+          files: |
+            canvas-wasi.tar.gz
+            canvas-wasi.zip
+            canvas-wasi-*.tgz
+          make_latest: ${{ startsWith(github.ref, 'refs/tags/') && 'true' || 'legacy' }}
+          target_commitish: ${{ github.sha }}
