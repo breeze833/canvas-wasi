@@ -1,0 +1,48 @@
+{
+  "name": "canvas-wasi",
+  "version": "0.1.0",
+  "description": "Zero-dependency HTML5 Canvas and software framebuffer graphics bridge for WebAssembly & WASI",
+  "type": "module",
+  "main": "./src/index.js",
+  "types": "./types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./types/index.d.ts",
+      "import": "./src/index.js"
+    },
+    "./worker": {
+      "types": "./types/index.d.ts",
+      "import": "./src/worker.js"
+    },
+    "./headers": {
+      "import": "./src/headers.js"
+    },
+    "./style.css": "./src/ui/style.css"
+  },
+  "files": [
+    "include",
+    "src",
+    "types",
+    "SPEC.md",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "node test/canvas-wasi.test.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/breeze833/canvas-wasi.git"
+  },
+  "keywords": [
+    "wasi",
+    "wasm",
+    "webassembly",
+    "canvas",
+    "graphics",
+    "framebuffer",
+    "2d"
+  ],
+  "author": "breeze833",
+  "license": "MIT"
+}

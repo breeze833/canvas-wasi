@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>canvas-wasi Standalone Demo</title>
+  <link rel="stylesheet" href="../src/ui/style.css">
+  <style>
+    body {
+      margin: 0;
+      padding: 30px;
+      background-color: #181818;
+      color: #e0e0e0;
+      font-family: system-ui, sans-serif;
+    }
+    h1 {
+      margin-top: 0;
+      font-size: 24px;
+      color: #61afef;
+    }
+    .demo-controls {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    button {
+      background-color: #2c313a;
+      color: #abb2bf;
+      border: 1px solid #3e4451;
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    button:hover {
+      background-color: #3b4048;
+      color: #fff;
+    }
+    .status-panel {
+      font-size: 13px;
+      color: #98c379;
+    }
+  </style>
+</head>
+<body>
+  <h1>canvas-wasi: Standalone Demo</h1>
+  <p>Minimal interactive demo demonstrating the floating/pop-out canvas window, input coordination, and software framebuffer presentation.</p>
+  
+  <div class="demo-controls">
+    <button id="btn-toggle">Open / Toggle Window</button>
+    <button id="btn-start-sim">Run Framebuffer Plasma</button>
+    <button id="btn-stop-sim">Stop Simulation</button>
+  </div>
+  
+  <div class="status-panel" id="status-panel">Ready. Click "Open / Toggle Window" or "Run Framebuffer Plasma".</div>
+
+  <script type="module">
+    import { GraphicsWindowUI, InputCoordinator } from '../src/index.js';
+
+    const statusPanel = document.getElementById('status-panel');
+    const width = 320;
+    const height = 240;
+
+    const input = new InputCoordinator({ width, height });
+    const win = new GraphicsWindowUI({
+      width,
+      height,
+      title: 'Plasma Demo',
+      inputCoordinator: input,
+      onCloseRequested: () => {
+        stopSim();
+        statusPanel.textContent = 'Window closed.';
+      }
+    });
+
+    let running = false;
+    let animId = null;
+    let frame = 0;
+    const buffer = new Uint32Array(width * height);
+
+    function renderPlasma() {
+      if (!running) return;
+      frame++;
+      const time = frame * 0.05;
+
+      for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+          const v1 = Math.sin(x * 0.04 + time);
+          const v2 = Math.sin(y * 0.04 + time);
+          const v3 = Math.sin((x + y) * 0.03 + time);
+          const val = (v1 + v2 + v3 + 3) / 6; // 0..1
+
+          const r = Math.floor(Math.sin(val * Math.PI) * 255);
+          const g = Math.floor(Math.sin(val * Math.PI + 2) * 255);
+          const b = Math.floor(Math.sin(val * Math.PI + 4) * 255);
+
+          buffer[y * width + x] = (255 << 24) | (b << 16) | (g << 8) | r;
+        }
+      }
+
+      // Draw mouse cursor position if over canvas
+      if (input.mouseX >= 0 && input.mouseX < width && input.mouseY >= 0 && input.mouseY < height) {
+        const mx = Math.floor(input.mouseX);
+        const my = Math.floor(input.mouseY);
+        for (let dy = -3; dy <= 3; dy++) {
+          for (let dx = -3; dx <= 3; dx++) {
+            const px = mx + dx;
+            const py = my + dy;
+            if (px >= 0 && px < width && py >= 0 && py < height) {
+              buffer[py * width + px] = 0xFF00FFFF; // bright yellow
+            }
+          }
+        }
+      }
+
+      win.renderFrameBuffer(buffer.buffer, width, height);
+      animId = requestAnimationFrame(renderPlasma);
+    }
+
+    function startSim() {
+      if (running) return;
+      running = true;
+      win.open(width, height, 'Plasma Demo');
+      statusPanel.textContent = 'Simulation running at 60 FPS. Try clicking, dragging, and popping out the window!';
+      renderPlasma();
+    }
+
+    function stopSim() {
+      running = false;
+      if (animId) cancelAnimationFrame(animId);
+      statusPanel.textContent = 'Simulation stopped.';
+    }
+
+    document.getElementById('btn-toggle').addEventListener('click', () => {
+      win.toggle();
+    });
+
+    document.getElementById('btn-start-sim').addEventListener('click', () => {
+      startSim();
+    });
+
+    document.getElementById('btn-stop-sim').addEventListener('click', () => {
+      stopSim();
+    });
+  </script>
+</body>
+</html>
