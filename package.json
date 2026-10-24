@@ -28,7 +28,9 @@
     "LICENSE"
   ],
   "scripts": {
-    "test": "node test/canvas-wasi.test.js"
+    "test": "node test/canvas-wasi.test.js",
+    "demo": "node examples/serve.js",
+    "start": "node examples/serve.js"
   },
   "repository": {
     "type": "git",
