@@ -28,6 +28,8 @@ export function createGraphicsImports(options = {}) {
   // Offscreen 2D canvas context for vector canvas API
   let offscreen2d = options.offscreenCanvas || null;
   let ctx2d = null;
+  let cloneCanvas = null;
+  let cloneCtx = null;
 
   function get2dContext() {
     if (!offscreen2d && typeof OffscreenCanvas !== 'undefined') {
@@ -217,16 +219,23 @@ export function createGraphicsImports(options = {}) {
   const canvas = {
     canvas_present: () => {
       if (!offscreen2d) return;
-      if (typeof offscreen2d.transferToImageBitmap === 'function') {
-        try {
-          const bitmap = offscreen2d.transferToImageBitmap();
-          if (bitmap) {
-            onFrame(bitmap);
-            finishPresent();
-            return;
+      try {
+        if (typeof OffscreenCanvas !== 'undefined') {
+          if (!cloneCanvas || cloneCanvas.width !== offscreen2d.width || cloneCanvas.height !== offscreen2d.height) {
+            cloneCanvas = new OffscreenCanvas(offscreen2d.width, offscreen2d.height);
+            cloneCtx = cloneCanvas.getContext('2d');
           }
-        } catch (_) {}
-      }
+          if (cloneCtx && typeof cloneCanvas.transferToImageBitmap === 'function') {
+            cloneCtx.drawImage(offscreen2d, 0, 0);
+            const bitmap = cloneCanvas.transferToImageBitmap();
+            if (bitmap) {
+              onFrame(bitmap);
+              finishPresent();
+              return;
+            }
+          }
+        }
+      } catch (_) {}
       if (typeof createImageBitmap !== 'undefined') {
         createImageBitmap(offscreen2d).then((bitmap) => {
           onFrame(bitmap);
