@@ -3,7 +3,7 @@
 `canvas-wasi` is a zero-dependency, modular C graphics and windowing subsystem for WebAssembly and WASI runtimes in the browser. It provides:
 1. Direct software framebuffer pixel manipulation (`<graphics.h>`).
 2. Hardware-accelerated HTML5 Canvas 2D vector primitives (`<graphics_canvas.h>`).
-3. Low-latency synchronous mouse/keyboard input via a 512-byte `SharedArrayBuffer` memory protocol.
+3. Low-latency synchronous mouse/keyboard input via a 512-byte `SharedArrayBuffer` memory protocol or fallback event listener routing.
 4. An interactive draggable, resizable, minimizable, and pop-out floating window UI.
 
 ---
@@ -32,8 +32,9 @@
 │   │      createGraphicsImports│      │      Shared Memory View      │  │
 │   │                           │      │                              │  │
 │   │  - OffscreenCanvas 2D Ctx │      │  - Synchronous Atomics Wait  │  │
-│   │  - Frame Pacing & Timing  │      │  - Zero-Copy Mouse/Key Polling│ │
-│   │  - Pixel Buffer Packing   │      │  - ESC / Window Close Flag   │  │
+│   │  - Canvas Clone Buffer    │      │  - Zero-Copy Mouse/Key Polling│ │
+│   │  - Frame Pacing & Timing  │      │  - ESC / Window Close Flag   │  │
+│   │  - Pixel Buffer Packing   │      │  - Linear Mem pollToWasm     │  │
 │   └─────────────▲─────────────┘      └──────────────┬───────────────┘  │
 │                 │ WebAssembly Imports (env)         │                  │
 │   ┌─────────────┴───────────────────────────────────▼──────────────┐  │
@@ -176,9 +177,11 @@ void canvas_set_pixel(int x, int y, uint32_t color);
 
 ---
 
-## 3. SharedArrayBuffer Input Memory Map (512 Bytes)
+## 3. Input Memory Map & Synchronization
 
-When `crossOriginIsolated` is active, a dedicated 512-byte `SharedArrayBuffer` coordinates input state between the main thread and WebAssembly worker with zero latency.
+### 3.1 SharedArrayBuffer Memory Map (512 Bytes)
+
+When running in cross-origin isolated contexts (`window.crossOriginIsolated === true`), a dedicated 512-byte `SharedArrayBuffer` coordinates input state between the main thread UI and Web Worker runtime with zero latency.
 
 | Byte Offset | Type | Field Name | Description |
 |---|---|---|---|
@@ -190,8 +193,8 @@ When `crossOriginIsolated` is active, a dedicated 512-byte `SharedArrayBuffer` c
 | `20` | `int32` | `shouldClose` | `1` if close requested or ESC pressed, `0` otherwise |
 | `24` | `float32` | `mouseX` | Mouse X coordinate mapped to canvas coordinate space |
 | `28` | `float32` | `mouseY` | Mouse Y coordinate mapped to canvas coordinate space |
-| `32` | `float32` | `mouseWheelX` | Horizontal wheel delta |
-| `36` | `float32` | `mouseWheelY` | Vertical wheel delta |
+| `32` | `float32` | `mouseWheelX` | Horizontal wheel delta accumulated |
+| `36` | `float32` | `mouseWheelY` | Vertical wheel delta accumulated |
 | `40` | `uint32` | `mouseButtons` | Button bitmask: Bit 0 = Left, Bit 1 = Right, Bit 2 = Middle |
 | `44 .. 107` | `uint32[16]` | `keysDown` | 512-bit bitmask of active keyboard keys (`DOM_KEY_MAP`) |
 | `108` | `int32` | `keyPressedCount` | Number of queued key events (max 32) |
@@ -199,18 +202,37 @@ When `crossOriginIsolated` is active, a dedicated 512-byte `SharedArrayBuffer` c
 | `240` | `int32` | `charPressedCount` | Number of queued Unicode codepoints (max 32) |
 | `244 .. 371` | `int32[32]` | `charPressedQueue` | Unicode codepoints typed since last frame |
 | `372 .. 375` | `int32` | `frameSyncWord` | Synchronization word for `Atomics.wait()` pacing |
-| `376 .. 511` | `uint8[136]` | `reserved` | Reserved for future expansions (gamepad, audio sync) |
+| `376 .. 511` | `uint8[136]` | `reserved` | Reserved for future extensions (gamepad, audio synchronization) |
+
+### 3.2 Linear Memory Polling (`pollToWasm`)
+For direct WASI / C runtimes that poll input directly into WebAssembly linear memory:
+```javascript
+inputCoordinator.pollToWasm(destPtr, wasmMemory);
+```
+- Copies 372 bytes of active input state directly into `destPtr` in linear memory.
+- Automatically resets transient deltas (`mouseWheelX`, `mouseWheelY`, `keyPressedQueue`, `charPressedQueue`).
+
+### 3.3 Keyboard Key Mapping (`DOM_KEY_MAP`)
+Keyboard keys are mapped into a 512-bit bitmask (`keysDown[16]`) using standard virtual keycodes:
+- `KeyA` – `KeyZ`: 65–90
+- `Digit0` – `Digit9`: 48–57
+- `Space`: 32, `Escape`: 256, `Enter`: 257, `Tab`: 258, `Backspace`: 259
+- `ArrowRight`: 262, `ArrowLeft`: 263, `ArrowDown`: 264, `ArrowUp`: 265
+- `F1` – `F12`: 290–301
+- Modifiers: `ShiftLeft` (340), `ControlLeft` (341), `AltLeft` (342), `MetaLeft` (343), etc.
+- Numpad: `Numpad0` – `Numpad9`: 320–329
 
 ---
 
 ## 4. WebAssembly Host Import Provider
 
-`createGraphicsImports(options)` returns host import definitions that satisfy all functions declared in `<graphics.h>` and `<graphics_canvas.h>`.
+`createGraphicsImports(options)` instantiates host bindings satisfying all functions declared in `<graphics.h>` and `<graphics_canvas.h>`.
 
 ### 4.1 Options Schema
 ```typescript
 interface CreateGraphicsImportsOptions {
-  getMemory: () => WebAssembly.Memory | null;
+  getMemory?: () => WebAssembly.Memory | null;
+  memory?: WebAssembly.Memory | null;
   sharedBuffer?: SharedArrayBuffer | null;
   inputCoordinator?: InputCoordinator | null;
   postMessage?: (msg: any, transfer?: Transferable[]) => void;
@@ -225,42 +247,111 @@ interface CreateGraphicsImportsOptions {
 }
 ```
 
-### 4.2 Frame Presentation & Zero-Copy ImageBitmap
-1. When `graphics_present(ptr)` or `canvas_present()` is invoked:
-   - In a Web Worker, `offscreen2d.transferToImageBitmap()` produces an `ImageBitmap`.
-   - The bitmap is posted to the main thread via transferable `postMessage({ type: 'frame', bitmap }, [bitmap])`.
-   - The main thread `GraphicsWindowUI` transfers it to the screen with `ctx.transferFromImageBitmap(bitmap)` with zero CPU-to-GPU copies.
-2. If `ImageBitmapRenderingContext` is unavailable, fallback raw array buffers are transferred and rendered via `putImageData` or `drawImage`.
+### 4.2 Return Value Schema
+```typescript
+interface GraphicsImportsResult {
+  graphics: Record<string, Function>;
+  canvas: Record<string, Function>;
+  env: Record<string, Function>; // Combined imports ready for Wasm instantiation
+  handleInputEvent: (event: any) => void; // Fallback manual event ingestion
+}
+```
 
-### 4.3 Frame Pacing & Timing
-`graphics_wait_frame(target_fps)` computes the remaining duration for the frame:
+Pass `env` directly when instantiating the WebAssembly module:
+```javascript
+const imports = createGraphicsImports({ getMemory: () => wasmMemory, postMessage });
+const instance = await WebAssembly.instantiate(module, { env: imports.env });
+```
+
+### 4.3 Frame Presentation & Canvas State Preservation
+1. **Software Framebuffer (`graphics_present`)**:
+   - Updates `offscreen2d` using `putImageData` from WebAssembly linear memory.
+   - If supported, extracts an `ImageBitmap` via `offscreen2d.transferToImageBitmap()` and delivers via `onFrame(bitmap)`.
+   - Fallback: creates an ArrayBuffer copy from linear memory (`mem.buffer.slice(...)`) and delivers via `onFrameBuffer(copyBuffer, width, height)`.
+2. **2D Canvas (`canvas_present`)**:
+   - Native `OffscreenCanvas.transferToImageBitmap()` detaches and empties the drawing surface. To preserve drawing state across frames for incremental 2D graphics, `canvas_present` maintains a reusable intermediate `cloneCanvas`.
+   - It blits `offscreen2d` onto `cloneCanvas`, extracts the `ImageBitmap` from the clone, and transfers it.
+   - Fallback: invokes `createImageBitmap(offscreen2d)` when transfer is unavailable.
+
+### 4.4 Frame Pacing & Timing
+`graphics_wait_frame(target_fps)` throttles rendering to maintain target frame rates:
 $$\Delta t_{\text{wait}} = \max\left(1, \left\lfloor \frac{1000}{\text{target\_fps}} - (t_{\text{now}} - t_{\text{last}}) \right\rfloor\right)$$
-- If a `SharedArrayBuffer` is available, it pauses the worker using `Atomics.wait(syncWord, 0, 0, waitMs)` without spinning the CPU.
-- If running on the main thread or without `Atomics`, it measures delta time with `performance.now()`.
+- When `sharedBuffer` and `Atomics` are available:
+  `Atomics.wait(syncWord, 0, 0, Math.min(waitMs, 50))` suspends the worker thread efficiently without busy waiting.
+- FPS Calculation: Measured over 1000ms intervals and reported via `onFps(fps)`.
+
+### 4.5 Fallback Input Routing
+When `SharedArrayBuffer` is unavailable, `createGraphicsImports` maintains local input variables (`currentMouseX`, `currentMouseY`, `currentMouseButtons`, `currentKeysDown`). The host can route UI events directly via:
+```javascript
+imports.handleInputEvent({ type: 'mouse', x: 120, y: 80, buttons: 1 });
+imports.handleInputEvent({ type: 'keydown', key: 32 });
+```
 
 ---
 
 ## 5. User Interface & Window Management
 
-`GraphicsWindowUI` provides floating, draggable in-page and detached window presentation:
+`GraphicsWindowUI` manages an interactive floating, draggable in-page window with pop-out window capabilities.
 
-1. **Draggable Container**: Draggable via the window header, bounded within viewport coordinates.
-2. **Minimization**: Collapses canvas body, retaining title, resolution, and FPS badges.
-3. **Pop-Out to Independent Window**:
-   - Detaches to a clean browser window via `window.open`.
-   - Uses `id="graphics-popup-canvas"` with a dedicated `bitmaprenderer` context.
-   - Forwards mouse, keyboard, and focus events back to the `InputCoordinator`.
-   - Provides a "↙ Dock into page" button and restores in-page display upon popup unload.
-4. **Activity Monitoring**:
-   - Invokes `onFrameActivity(true)` whenever new frames arrive while the window is hidden or minimized, enabling host notifications (such as pulsing status badges).
+### 5.1 DOM Hierarchy
+When instantiated, `GraphicsWindowUI` creates `#graphics-window`:
+```html
+<div id="graphics-window" class="graphics-window">
+  <div class="graphics-header" id="graphics-header">
+    <div class="graphics-title">
+      <span class="graphics-icon">🎮</span>
+      <span id="graphics-title-text">Title</span>
+      <span class="graphics-badge" id="graphics-res-badge">640x480</span>
+      <span class="graphics-badge fps-badge" id="graphics-fps-badge">60 FPS</span>
+    </div>
+    <div class="graphics-actions">
+      <button id="btn-graphics-popout" class="graphics-btn">↗</button>
+      <button id="btn-graphics-min" class="graphics-btn">_</button>
+      <button id="btn-graphics-close" class="graphics-btn">&times;</button>
+    </div>
+  </div>
+  <div class="graphics-body" id="graphics-body">
+    <canvas id="graphics-canvas" width="640" height="480" tabindex="0"></canvas>
+  </div>
+</div>
+```
+
+### 5.2 API Reference
+- `open(width, height, title)`: Opens and initializes window with dimensions and title.
+- `close()`: Closes window, notifies callbacks, and resets input state.
+- `show()`, `hide()`, `toggle()`: Controls window visibility.
+- `toggleMinimize()`: Toggles compact titlebar-only mode (`.minimized`).
+- `togglePopOut()` / `popOut()`: Opens external popup window (`window.open`) with dedicated canvas `#graphics-popup-canvas` and "↙ Dock into page" control.
+- `dockBack()`: Closes popup window and restores in-page floating display.
+- `isOpen(): boolean`: Returns whether in-page or pop-out window is active.
+- `isCanvasVisible(): boolean`: Returns true if canvas is currently visible (open and not minimized).
+- `renderFrame(bitmap: ImageBitmap)`: Renders frame via `bitmaprenderer` (or 2D fallback `drawImage`) and tracks background activity.
+- `renderFrameBuffer(buffer, width, height)`: Fallback pixel buffer renderer via `ImageData` / `putImageData`.
+- `updateFPS(fps: number)` / `updateFps(fps: number)`: Updates FPS badge text.
+- `setInputCoordinator(inputCoordinator)`: Re-binds input listeners between in-page and popup canvases.
+- `setActivity(active: boolean)` / `clearActivity()`: Invokes `onFrameActivity(active)` for host background notifications.
 
 ---
 
-## 6. TypeScript Support
+## 6. Package Structure & Module Exports
 
-The package provides strict TypeScript declaration files at `types/index.d.ts` covering:
-- `GraphicsWindowUI`
-- `InputCoordinator`
+The package defines standard subpath exports in `package.json`:
+
+| Subpath | Target | Purpose |
+|---|---|---|
+| `canvas-wasi` (`.`) | `./src/index.js` | Main package entry: `GraphicsWindowUI`, `InputCoordinator`, `DOM_KEY_MAP`, `createGraphicsImports`, `GRAPHICS_H`, `GRAPHICS_CANVAS_H` |
+| `canvas-wasi/worker` (`./worker`) | `./src/worker.js` | Worker entry: lightweight `createGraphicsImports` |
+| `canvas-wasi/headers` (`./headers`) | `./src/headers.js` | C header string constants (`GRAPHICS_H`, `GRAPHICS_CANVAS_H`) for browser virtual filesystems |
+| `canvas-wasi/style.css` (`./style.css`) | `./src/ui/style.css` | Stylesheet for the floating window component |
+
+---
+
+## 7. TypeScript Support
+
+Strict TypeScript declaration files are provided at `types/index.d.ts` covering:
+- `GraphicsWindowUI` & `GraphicsWindowUIOptions`
+- `InputCoordinator` & `InputCoordinatorOptions`
 - `DOM_KEY_MAP`
-- `createGraphicsImports`
+- `createGraphicsImports`, `CreateGraphicsImportsOptions`, & `GraphicsImportsResult`
 - Header string constants `GRAPHICS_H` and `GRAPHICS_CANVAS_H`
+

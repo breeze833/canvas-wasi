@@ -44,8 +44,8 @@ jobs:
       - name: Create release archives
         run: |
           npm pack
-          tar -czvf canvas-wasi.tar.gz include src types SPEC.md README.md LICENSE package.json
-          zip -r canvas-wasi.zip include src types SPEC.md README.md LICENSE package.json
+          tar -czvf canvas-wasi.tar.gz include src types SPEC.md README.md AGENTS.md LICENSE package.json
+          zip -r canvas-wasi.zip include src types SPEC.md README.md AGENTS.md LICENSE package.json
 
       - name: Create or Update GitHub Release
         uses: softprops/action-gh-release@v2

@@ -13,10 +13,11 @@ For complete architectural details, C API signatures, and SharedArrayBuffer memo
 ## Features
 
 - 🎮 **Direct Software Framebuffer (`<graphics.h>`)**: Zero-dependency 32-bit RGBA pixel buffer presentation (`graphics_present`) for pure C programs.
-- 🎨 **HTML5 Canvas 2D Vector Primitives (`<graphics_canvas.h>`)**: Path drawing (`arc`, `line_to`, `fill`), transformations, gradients, text, and styles backed by `CanvasRenderingContext2D`.
+- 🎨 **HTML5 Canvas 2D Vector Primitives (`<graphics_canvas.h>`)**: High-performance path drawing (`arc`, `line_to`, `fill`), transformations, text, and styles backed by `CanvasRenderingContext2D` with canvas state preservation.
+- 🖼️ **Dual Presentation Pipeline**: Zero-copy hardware-accelerated `ImageBitmap` presentation via `bitmaprenderer` and fallback transferable array buffer rendering.
 - ⚡ **Zero-Latency Synchronous Input**: 512-byte `SharedArrayBuffer` memory layout with Atomics frame pacing for mouse coordinates, buttons, wheel, and key states.
 - 🪟 **Interactive Window Controller**: Floating, draggable in-page window with pop-out support (`window.open`), dock back, minimize, resolution badge, and real-time FPS counter.
-- 🚀 **Zero External Dependencies**: Pure vanilla JavaScript/ES modules and standard C headers.
+- 🚀 **Zero External Dependencies**: Pure vanilla JavaScript/ES modules and standard C headers without linker dependencies.
 
 ---
 
@@ -171,11 +172,57 @@ vfs.writeFile('/usr/include/graphics_canvas.h', GRAPHICS_CANVAS_H);
 
 ---
 
+## Package Exports Reference
+
+| Subpath | Target | Description |
+|---|---|---|
+| `canvas-wasi` (`.`) | `./src/index.js` | Main package entry: `GraphicsWindowUI`, `InputCoordinator`, `DOM_KEY_MAP`, `createGraphicsImports`, `GRAPHICS_H`, `GRAPHICS_CANVAS_H` |
+| `canvas-wasi/worker` (`./worker`) | `./src/worker.js` | Worker entry: lightweight `createGraphicsImports` |
+| `canvas-wasi/headers` (`./headers`) | `./src/headers.js` | C header string constants (`GRAPHICS_H`, `GRAPHICS_CANVAS_H`) for browser virtual filesystems |
+| `canvas-wasi/style.css` (`./style.css`) | `./src/ui/style.css` | Stylesheet for the floating window component |
+
+---
+
+## Standalone Demos & Examples
+
+The repository includes a zero-dependency local development server and reference C programs:
+
+### Running the Interactive Demo
+
+Start the demo server with COOP/COEP headers enabled for `SharedArrayBuffer` support:
+
+```bash
+npm run demo
+# or
+npm start
+```
+
+Then navigate to `http://localhost:3000/examples/demo.html` to test the floating canvas window, pop-out controls, and interactive plasma simulation.
+
+### Included Reference C Programs
+
+- **[`examples/01_framebuffer.c`](examples/01_framebuffer.c)**: Direct 32-bit RGBA pixel manipulation using `<graphics.h>`, 60 FPS procedural plasma, interactive mouse drawing, and key detection.
+- **[`examples/02_canvas_vector.c`](examples/02_canvas_vector.c)**: Native HTML5 2D vector graphics using `<graphics_canvas.h>`, anti-aliased geometry, matrix transforms (`save`, `rotate`, `restore`), bouncing physics balls, and interactive pointer rays.
+- **[`examples/03_canvas_pixels.c`](examples/03_canvas_pixels.c)**: Hybrid 2D pipeline with pixel-level image processing filters (3x3 Sobel edge detection, 3x3 box blur, color inversion, and interactive mouse lens).
+
+---
+
 ## Running Tests
+
+Run the standalone unit test suite:
 
 ```bash
 npm test
+# or directly via node:
+node test/canvas-wasi.test.js
 ```
+
+---
+
+## Technical Specifications & Agent Guidelines
+
+- **[SPEC.md](SPEC.md)**: Full technical architecture, 512-byte SharedArrayBuffer memory layout, C API specifications, and frame presentation protocols.
+- **[AGENTS.md](AGENTS.md)**: Architecture map, design invariants, coding conventions, and contribution guidelines for AI agents and human developers.
 
 ---
 

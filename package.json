@@ -25,6 +25,7 @@
     "types",
     "SPEC.md",
     "README.md",
+    "AGENTS.md",
     "LICENSE"
   ],
   "scripts": {

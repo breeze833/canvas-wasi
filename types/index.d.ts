@@ -34,6 +34,8 @@ export class GraphicsWindowUI {
   updateFps(fps: number): void;
   updateFPS(fps: number): void;
   setInputCoordinator(inputCoordinator: InputCoordinator): void;
+  setActivity(active: boolean): void;
+  clearActivity(): void;
 }
 
 export interface InputCoordinatorOptions {
