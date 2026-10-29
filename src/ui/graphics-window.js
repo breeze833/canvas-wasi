@@ -91,6 +91,13 @@ export class GraphicsWindowUI {
       this.togglePopOut();
     });
 
+    // Clicking window frame / non-canvas areas brings window to focus
+    this.container.addEventListener('mousedown', (e) => {
+      if (e.target && (e.target.closest('.graphics-actions') || e.target.closest('button'))) return;
+      this.container.style.zIndex = '1000';
+      this.focus();
+    });
+
     // Canvas focus / blur events
     this.canvas.addEventListener('focus', () => {
       this.container.classList.add('focused');
@@ -137,6 +144,10 @@ export class GraphicsWindowUI {
       initialTop = rect.top;
 
       this.container.style.zIndex = '1000';
+      this.focus();
+      if (typeof e.preventDefault === 'function') {
+        e.preventDefault();
+      }
 
       const onMouseMove = (moveEvent) => {
         if (!isDragging) return;
@@ -296,6 +307,21 @@ export class GraphicsWindowUI {
     }
   }
 
+  focus() {
+    if (this.isPoppedOut) {
+      if (this.popupWindow && !this.popupWindow.closed) {
+        this.popupWindow.focus();
+      }
+      if (this.popupCanvas && typeof this.popupCanvas.focus === 'function') {
+        this.popupCanvas.focus();
+      }
+      return;
+    }
+    if (this.canvas && typeof this.canvas.focus === 'function') {
+      this.canvas.focus();
+    }
+  }
+
   hide() {
     if (this.container) {
       this.container.style.display = 'none';
@@ -336,6 +362,7 @@ export class GraphicsWindowUI {
       } else {
         this.container.classList.remove('minimized');
         this.clearActivity();
+        this.focus();
       }
     }
   }
@@ -416,11 +443,13 @@ export class GraphicsWindowUI {
       this.inputCoordinator.attachListeners(this.popupCanvas, this.popupWindow);
     }
 
-    this.popupWindow.addEventListener('click', () => {
+    const onPopupFocus = () => {
       if (this.popupCanvas && typeof this.popupCanvas.focus === 'function') {
         this.popupCanvas.focus();
       }
-    });
+    };
+    this.popupWindow.addEventListener('mousedown', onPopupFocus);
+    this.popupWindow.addEventListener('click', onPopupFocus);
 
     this.popupWindow.addEventListener('unload', () => {
       if (this.isPoppedOut) {

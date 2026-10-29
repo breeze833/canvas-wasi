@@ -319,8 +319,9 @@ When instantiated, `GraphicsWindowUI` creates `#graphics-window`:
 ### 5.2 API Reference
 - `open(width, height, title)`: Opens and initializes window with dimensions and title.
 - `close()`: Closes window, notifies callbacks, and resets input state.
+- `focus()`: Focuses the active canvas (in-page or popup) to bring the window into focus and receive keyboard input.
 - `show()`, `hide()`, `toggle()`: Controls window visibility.
-- `toggleMinimize()`: Toggles compact titlebar-only mode (`.minimized`).
+- `toggleMinimize()`: Toggles compact titlebar-only mode (`.minimized`). Restoring automatically refocuses the canvas.
 - `togglePopOut()` / `popOut()`: Opens external popup window (`window.open`) with dedicated canvas `#graphics-popup-canvas` and "↙ Dock into page" control.
 - `dockBack()`: Closes popup window and restores in-page floating display.
 - `isOpen(): boolean`: Returns whether in-page or pop-out window is active.

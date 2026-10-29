@@ -185,9 +185,10 @@ assert.strictEqual(closeDelivered, true, 'graphics_close must trigger onClose ca
 
 console.log('✓ createGraphicsImports WebAssembly host bindings verified');
 
-// Test 4: GraphicsWindowUI Mock DOM Lifecycle
+// Test 4: GraphicsWindowUI Mock DOM Lifecycle & Focus Handling
 function createMockEl(tag, id = '') {
-  return {
+  const queryCache = new Map();
+  const el = {
     tagName: tag.toUpperCase(),
     id,
     className: '',
@@ -201,36 +202,111 @@ function createMockEl(tag, id = '') {
     children: [],
     innerHTML: '',
     textContent: '',
-    addEventListener() {},
-    removeEventListener() {},
+    _listeners: {},
+    addEventListener(evt, fn) {
+      if (!this._listeners[evt]) this._listeners[evt] = [];
+      this._listeners[evt].push(fn);
+    },
+    removeEventListener(evt, fn) {
+      if (this._listeners[evt]) {
+        this._listeners[evt] = this._listeners[evt].filter(f => f !== fn);
+      }
+    },
+    dispatchEvent(evtObj) {
+      const type = evtObj.type;
+      if (this._listeners[type]) {
+        for (const fn of this._listeners[type]) {
+          fn(evtObj);
+        }
+      }
+    },
+    closest(sel) {
+      if (sel === 'button' && this.tagName === 'BUTTON') return this;
+      if (sel === '.graphics-actions' && (this.className.includes('graphics-actions') || this._parent?.className?.includes('graphics-actions'))) return this;
+      return null;
+    },
     querySelector(sel) {
-      if (sel.startsWith('#')) return createMockEl('div', sel.slice(1));
-      return createMockEl('div');
+      if (!queryCache.has(sel)) {
+        const childTag = sel.includes('button') || sel.includes('btn') ? 'button' : (sel.includes('canvas') ? 'canvas' : 'div');
+        const childId = sel.startsWith('#') ? sel.slice(1) : '';
+        const child = createMockEl(childTag, childId);
+        child._parent = this;
+        queryCache.set(sel, child);
+      }
+      return queryCache.get(sel);
+    },
+    getBoundingClientRect() {
+      return { left: 100, top: 100, width: 640, height: 480 };
     },
     getContext(type) {
       return { type, transferFromImageBitmap() {}, drawImage() {}, putImageData() {} };
     },
-    focus() {}
+    focus() {
+      this.dispatchEvent({ type: 'focus' });
+    },
+    blur() {
+      this.dispatchEvent({ type: 'blur' });
+    }
   };
+  return el;
 }
 
+const docElements = new Map();
+const mockBody = createMockEl('body');
+mockBody.appendChild = (child) => {
+  if (child && child.id) {
+    docElements.set(child.id, child);
+  }
+};
+
 globalThis.document = {
-  body: createMockEl('body'),
-  getElementById(id) { return createMockEl('div', id); },
+  body: mockBody,
+  getElementById(id) {
+    return docElements.get(id) || null;
+  },
   createElement(tag) { return createMockEl(tag); }
 };
 
 const { GraphicsWindowUI } = await import('../src/ui/graphics-window.js');
-const win = new GraphicsWindowUI({ width: 640, height: 480, title: 'Test Window' });
+const focusEvents = [];
+const win = new GraphicsWindowUI({
+  width: 640,
+  height: 480,
+  title: 'Test Window',
+  onFocusChange: (f) => focusEvents.push(f)
+});
 assert.strictEqual(win.isOpen(), false, 'Window should initially be closed');
 win.open(640, 480, 'Test Window');
 assert.strictEqual(win.isOpen(), true, 'Window should be open after win.open()');
+assert.strictEqual(win.container.classList.contains('focused'), true, 'Window canvas should receive focus on open()');
+
+// Simulate canvas blur
+win.canvas.blur();
+assert.strictEqual(win.container.classList.contains('focused'), false, 'Window should lose focused class on canvas blur');
+
+// Click on window frame / non-canvas area (e.g. title bar or frame border)
+const mockFrameTarget = createMockEl('div', 'graphics-header');
+win.container.dispatchEvent({ type: 'mousedown', target: mockFrameTarget });
+assert.strictEqual(win.container.classList.contains('focused'), true, 'Clicking window frame must bring window/canvas to focus');
+assert.strictEqual(win.container.style.zIndex, '1000', 'Clicking window frame should bring window zIndex to top');
+
+// Click on action button should NOT focus canvas
+win.canvas.blur();
+assert.strictEqual(win.container.classList.contains('focused'), false, 'Window blurred before action button click');
+const mockCloseBtn = createMockEl('button', 'btn-graphics-close');
+mockCloseBtn._parent = createMockEl('div');
+mockCloseBtn._parent.className = 'graphics-actions';
+win.container.dispatchEvent({ type: 'mousedown', target: mockCloseBtn });
+assert.strictEqual(win.container.classList.contains('focused'), false, 'Clicking action button must not focus canvas');
+
 win.toggleMinimize();
 assert.strictEqual(win.isMinimized, true, 'Window should be minimized');
 win.toggleMinimize();
 assert.strictEqual(win.isMinimized, false, 'Window should be restored');
+assert.strictEqual(win.container.classList.contains('focused'), true, 'Restoring from minimize should focus window');
+
 win.close();
 assert.strictEqual(win.isOpen(), false, 'Window should be closed after win.close()');
 
-console.log('✓ GraphicsWindowUI DOM lifecycle verified');
+console.log('✓ GraphicsWindowUI DOM lifecycle and window frame focus verified');
 console.log('--- All canvas-wasi tests passed successfully! ---');

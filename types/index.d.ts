@@ -20,6 +20,7 @@ export class GraphicsWindowUI {
   isMinimized: boolean;
   open(width?: number, height?: number, title?: string): void;
   close(): void;
+  focus(): void;
   show(): void;
   hide(): void;
   toggle(): void;
