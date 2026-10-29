@@ -1,6 +1,6 @@
 {
   "name": "canvas-wasi",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Zero-dependency HTML5 Canvas and software framebuffer graphics bridge for WebAssembly & WASI",
   "type": "module",
   "main": "./src/index.js",
