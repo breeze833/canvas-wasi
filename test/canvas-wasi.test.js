@@ -246,6 +246,9 @@ function createMockEl(tag, id = '') {
     },
     blur() {
       this.dispatchEvent({ type: 'blur' });
+    },
+    setAttribute(name, value) {
+      this[name] = value;
     }
   };
   return el;
@@ -301,8 +304,10 @@ assert.strictEqual(win.container.classList.contains('focused'), false, 'Clicking
 
 win.toggleMinimize();
 assert.strictEqual(win.isMinimized, true, 'Window should be minimized');
+assert.strictEqual(win.container.querySelector('#btn-graphics-min').textContent, '□', 'Min button should display square (maximize) when minimized');
 win.toggleMinimize();
 assert.strictEqual(win.isMinimized, false, 'Window should be restored');
+assert.strictEqual(win.container.querySelector('#btn-graphics-min').textContent, '_', 'Min button should display underscore (minimize) when restored');
 assert.strictEqual(win.container.classList.contains('focused'), true, 'Restoring from minimize should focus window');
 
 win.close();

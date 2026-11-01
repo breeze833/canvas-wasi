@@ -301,6 +301,12 @@ export class GraphicsWindowUI {
       this.container.style.zIndex = '1000';
       this.isMinimized = false;
       this.container.classList.remove('minimized');
+      const minBtn = this.container.querySelector('#btn-graphics-min');
+      if (minBtn) {
+        minBtn.textContent = '_';
+        minBtn.title = 'Minimize';
+        minBtn.setAttribute?.('data-tooltip', 'Minimize');
+      }
     }
     if (this.canvas && typeof this.canvas.focus === 'function') {
       this.canvas.focus();
@@ -357,10 +363,21 @@ export class GraphicsWindowUI {
   toggleMinimize() {
     this.isMinimized = !this.isMinimized;
     if (this.container) {
+      const minBtn = this.container.querySelector('#btn-graphics-min');
       if (this.isMinimized) {
         this.container.classList.add('minimized');
+        if (minBtn) {
+          minBtn.textContent = '□';
+          minBtn.title = 'Maximize';
+          minBtn.setAttribute?.('data-tooltip', 'Maximize');
+        }
       } else {
         this.container.classList.remove('minimized');
+        if (minBtn) {
+          minBtn.textContent = '_';
+          minBtn.title = 'Minimize';
+          minBtn.setAttribute?.('data-tooltip', 'Minimize');
+        }
         this.clearActivity();
         this.focus();
       }
