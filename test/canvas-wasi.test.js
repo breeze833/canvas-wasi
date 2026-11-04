@@ -314,4 +314,26 @@ win.close();
 assert.strictEqual(win.isOpen(), false, 'Window should be closed after win.close()');
 
 console.log('✓ GraphicsWindowUI DOM lifecycle and window frame focus verified');
+
+// Test 5: Verify Documentation Files and API Coverage
+const docsDir = path.join(__dirname, '../docs');
+assert.strictEqual(fs.existsSync(path.join(docsDir, 'README.md')), true, 'docs/README.md must exist');
+assert.strictEqual(fs.existsSync(path.join(docsDir, 'c_api_reference.md')), true, 'docs/c_api_reference.md must exist');
+assert.strictEqual(fs.existsSync(path.join(docsDir, 'js_api_reference.md')), true, 'docs/js_api_reference.md must exist');
+assert.strictEqual(fs.existsSync(path.join(docsDir, 'integration_guide.md')), true, 'docs/integration_guide.md must exist');
+
+const cDocContent = fs.readFileSync(path.join(docsDir, 'c_api_reference.md'), 'utf8');
+for (const fn of expectedGraphicsFuncs) {
+  assert.strictEqual(cDocContent.includes(`\`${fn}\``) || cDocContent.includes(fn), true, `docs/c_api_reference.md must document ${fn}`);
+}
+for (const fn of expectedCanvasFuncs) {
+  assert.strictEqual(cDocContent.includes(`\`${fn}\``) || cDocContent.includes(fn), true, `docs/c_api_reference.md must document ${fn}`);
+}
+
+const jsDocContent = fs.readFileSync(path.join(docsDir, 'js_api_reference.md'), 'utf8');
+assert.strictEqual(jsDocContent.includes('GraphicsWindowUI'), true, 'docs/js_api_reference.md must document GraphicsWindowUI');
+assert.strictEqual(jsDocContent.includes('InputCoordinator'), true, 'docs/js_api_reference.md must document InputCoordinator');
+assert.strictEqual(jsDocContent.includes('createGraphicsImports'), true, 'docs/js_api_reference.md must document createGraphicsImports');
+
+console.log('✓ Documentation files and API coverage verified');
 console.log('--- All canvas-wasi tests passed successfully! ---');

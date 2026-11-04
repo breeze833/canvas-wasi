@@ -53,6 +53,11 @@ When modifying or extending the codebase, strictly adhere to these fundamental i
 
 ```
 canvas-wasi/
+├── docs/                      # Comprehensive API documentation & integration guides
+│   ├── README.md              # Documentation navigation & architecture overview
+│   ├── c_api_reference.md     # C/C++ API reference (<graphics.h>, <graphics_canvas.h>)
+│   ├── js_api_reference.md    # JavaScript & TypeScript host API reference
+│   └── integration_guide.md   # Web Worker, COOP/COEP & Clang integration guide
 ├── include/
 │   ├── graphics.h             # C header for software framebuffer & input
 │   └── graphics_canvas.h      # C header for HTML5 Canvas 2D vector API
@@ -160,4 +165,4 @@ Before completing tasks or submitting PRs, verify:
 - [ ] Header parity verified: `include/` headers match `src/headers.js`.
 - [ ] No new npm runtime dependencies introduced.
 - [ ] `types/index.d.ts` reflects any newly added or modified methods and options.
-- [ ] Documentation (`README.md`, `SPEC.md`, `AGENTS.md`) is kept synchronized with code changes.
+- [ ] Documentation (`README.md`, `SPEC.md`, `AGENTS.md`, `docs/`) is kept synchronized with code changes.

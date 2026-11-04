@@ -219,8 +219,12 @@ node test/canvas-wasi.test.js
 
 ---
 
-## Technical Specifications & Agent Guidelines
+## Documentation & Technical Specifications
 
+- **[Documentation Suite](docs/README.md)**: Complete guides and API reference index.
+- **[C API Reference](docs/c_api_reference.md)**: Complete reference for `<graphics.h>` and `<graphics_canvas.h>`, pixel formats, keycodes, and C examples.
+- **[JavaScript & TypeScript Host API Reference](docs/js_api_reference.md)**: API reference for `GraphicsWindowUI`, `InputCoordinator`, `createGraphicsImports`, and virtual headers.
+- **[Integration & Architecture Guide](docs/integration_guide.md)**: Web Worker setup, Cross-Origin Isolation (COOP/COEP), Clang compilation, and browser IDE integration.
 - **[SPEC.md](SPEC.md)**: Full technical architecture, 512-byte SharedArrayBuffer memory layout, C API specifications, and frame presentation protocols.
 - **[AGENTS.md](AGENTS.md)**: Architecture map, design invariants, coding conventions, and contribution guidelines for AI agents and human developers.
 
