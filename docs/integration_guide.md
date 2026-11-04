@@ -34,8 +34,8 @@ This guide walks you through integrating `canvas-wasi` into your WebAssembly app
 │                        Main Browser Thread                             │
 │                                                                        │
 │   ┌───────────────────────────┐      ┌──────────────────────────────┐  │
-│   │     GraphicsWindowUI      │      │       InputCoordinator       │  │
-│   │                           │      │                              │  │
+│   │CanvasWindow / GraphicsWin │      │       InputCoordinator       │  │
+│   │(from canvas-window)       │      │(from canvas-window)          │  │
 │   │  - Draggable In-Page Win  │◄────►│  - Mouse/Wheel Listeners     │  │
 │   │  - External Popup Window  │      │  - Keyboard DOM Key Map      │  │
 │   │  - ImageBitmap Renderer   │      │  - Coordinate Translation    │  │

@@ -1,5 +1,33 @@
 // canvas-wasi: Main Package Entry Point
-export { GraphicsWindowUI } from './ui/graphics-window.js';
-export { InputCoordinator, DOM_KEY_MAP } from './input/input-coordinator.js';
+export {
+  CanvasWindow,
+  GraphicsWindowUI,
+  InputCoordinator,
+  DOM_KEY_MAP,
+  INPUT_BUFFER_SIZE,
+  INPUT_LAYOUT_OFFSETS,
+  OFF_WINDOW_WIDTH,
+  OFF_WINDOW_HEIGHT,
+  OFF_RENDER_WIDTH,
+  OFF_RENDER_HEIGHT,
+  OFF_DPI_SCALE,
+  OFF_SHOULD_CLOSE,
+  OFF_MOUSE_X,
+  OFF_MOUSE_Y,
+  OFF_MOUSE_WHEEL_X,
+  OFF_MOUSE_WHEEL_Y,
+  OFF_MOUSE_BUTTONS,
+  OFF_KEYS_DOWN,
+  OFF_KEY_PRESSED_COUNT,
+  OFF_KEY_PRESSED_QUEUE,
+  OFF_CHAR_PRESSED_COUNT,
+  OFF_CHAR_PRESSED_QUEUE,
+  OFF_FRAME_SYNC,
+  OFF_RESERVED,
+  MOUSE_BUTTON_LEFT,
+  MOUSE_BUTTON_RIGHT,
+  MOUSE_BUTTON_MIDDLE
+} from 'canvas-window';
+
 export { createGraphicsImports } from './host/graphics-imports.js';
 export { GRAPHICS_H, GRAPHICS_CANVAS_H } from './headers.js';

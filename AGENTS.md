@@ -26,8 +26,8 @@ This document provides architectural context, design invariants, coding conventi
 
 When modifying or extending the codebase, strictly adhere to these fundamental invariants:
 
-1. **Zero External Runtime Dependencies**:
-   - Do not introduce runtime npm packages. All source code must be vanilla ES modules and standard browser APIs.
+1. **Single Runtime Dependency (`canvas-window`)**:
+   - `canvas-wasi` delegates DOM windowing, popup detachment, and input coordination to `canvas-window`. Do not introduce other runtime npm packages.
 2. **Zero External C Linker Flags**:
    - The C headers (`<graphics.h>` and `<graphics_canvas.h>`) declare host functions directly resolved by WebAssembly host imports (`env.*`). C programs compile without extra linker flags (e.g. `gcc app.c -o a.out` without `-l...`).
 3. **C Header Parity (`include/` vs `src/headers.js`)**:
@@ -49,7 +49,57 @@ When modifying or extending the codebase, strictly adhere to these fundamental i
 
 ---
 
-## 3. Directory Structure & Key Files
+## 3. Developer Collaboration & Revision Workflow
+
+All agent-assisted development in this repository must strictly adhere to the developer's 4-phase revision workflow:
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│  Phase 1: Specification Revision & Developer Confirmation     │
+│  - Propose/update SPEC.md changes first                      │
+│  - Await explicit developer review & approval                │
+└──────────────────────────────┬───────────────────────────────┘
+                               │ Approved
+                               ▼
+┌──────────────────────────────────────────────────────────────┐
+│  Phase 2: Specification-Compliant Implementation             │
+│  - Strictly implement according to the confirmed SPEC.md     │
+│  - Verify automated tests (npm test) with zero failures      │
+└──────────────────────────────┬───────────────────────────────┘
+                               │ Verified
+                               ▼
+┌──────────────────────────────────────────────────────────────┐
+│  Phase 3: Developer Manual Verification                      │
+│  - Prompt developer to perform interactive verification      │
+│  - Developer tests UI/input via npm run demo / examples      │
+└──────────────────────────────┬───────────────────────────────┘
+                               │ Developer Confirmed
+                               ▼
+┌──────────────────────────────────────────────────────────────┐
+│  Phase 4: Explicitly Instructed Document Alignment & Commit  │
+│  - Await developer's explicit instruction                    │
+│  - Align secondary docs (README.md, types, etc.)             │
+│  - Stage and commit changes to git repository                │
+└──────────────────────────────────────────────────────────────┘
+```
+
+### Detailed Workflow Protocol
+
+1. **Specification First**:
+   - For any architectural change, protocol modification, API addition, or bug fix, first formulate the design in `SPEC.md`.
+   - The developer must review and explicitly confirm the specification change before any source code is modified.
+2. **Strict Specification Compliance**:
+   - During implementation, agents must strictly conform to the confirmed `SPEC.md`. No unauthorized deviations or undocumented side-effects are permitted.
+3. **Developer Manual Verification**:
+   - Following automated test validation (`npm test`), the agent must pause and request the developer to conduct manual verification using the local interactive environment (`npm run demo` -> `examples/demo.html`).
+   - The agent should provide clear, concise instructions on what interactive samples to test.
+4. **Explicit Instruction for Document Alignment & Repo Commit**:
+   - Agents must **not** unilaterally perform bulk document alignment or git commits without direct instruction.
+   - The developer will explicitly instruct the agent when manual verification has succeeded and direct the document alignment (e.g., updating `README.md`, `types/index.d.ts`, etc.) and repository commit (`git add`, `git commit`).
+
+---
+
+## 4. Directory Structure & Key Files
 
 ```
 canvas-wasi/
@@ -90,9 +140,9 @@ canvas-wasi/
 
 ---
 
-## 4. Development & Testing Commands
+## 5. Development & Testing Commands
 
-All commands are zero-dependency standard Node.js:
+All commands are standard Node.js:
 
 ```bash
 # Run unit test suite
@@ -109,60 +159,56 @@ npm pack --dry-run
 
 ---
 
-## 5. Agent Modification Procedures
+## 6. Agent Modification Procedures
 
-### 5.1 Adding a New C Graphics / Canvas API Function
+### 6.1 Adding a New C Graphics / Canvas API Function
 
-1. **Update C Header**:
+1. **Specification First**:
+   - Update `SPEC.md` and obtain developer confirmation.
+2. **Update C Header**:
    - Add function declaration to `include/graphics.h` or `include/graphics_canvas.h`.
-2. **Synchronize Virtual Header Constant**:
+3. **Synchronize Virtual Header Constant**:
    - Update `GRAPHICS_H` or `GRAPHICS_CANVAS_H` in `src/headers.js`. Ensure text matches `include/` headers exactly.
-3. **Implement Host Import**:
+4. **Implement Host Import**:
    - In `src/host/graphics-imports.js`, implement the function under `graphics` or `canvas` object.
    - Decode string pointers using `decodeStr(ptr)` when passing text.
    - Convert coordinate or color parameters as appropriate.
-4. **Update TypeScript Definitions**:
+5. **Update TypeScript Definitions**:
    - Add function type in `types/index.d.ts` under `GraphicsImportsResult` or related interfaces.
-5. **Update Test Suite**:
+6. **Update Test Suite**:
    - Add the function name to `expectedGraphicsFuncs` or `expectedCanvasFuncs` in `test/canvas-wasi.test.js`.
    - Add unit test verification if applicable.
-6. **Update Specifications**:
-   - Document new API signature in `SPEC.md`.
 7. **Verify**:
    - Run `npm test` and ensure all tests pass.
 
-### 5.2 Modifying the Input Memory Layout
+### 6.2 Modifying the Input Memory Layout
 
-1. **Verify Layout in `SPEC.md`**:
-   - Check the 512-byte table in `SPEC.md`. Offsets 0..375 are active fields; 376..511 are reserved.
-2. **Update Writer**:
-   - Update `updateSharedState()` and `pollToWasm()` in `src/input/input-coordinator.js`.
-3. **Update Reader**:
-   - Update reads in `graphics_get_mouse`, `graphics_is_key_down`, and `graphics_should_close` in `src/host/graphics-imports.js`.
-4. **Update Tests**:
-   - Update data view checks in `test/canvas-wasi.test.js`.
-5. **Verify**:
+1. **Modify in `canvas-window`**:
+   - The 512-byte `SharedArrayBuffer` memory layout and protocol constants are defined and owned by `canvas-window` (`src/protocol.js`).
+   - If extending the memory layout (offsets 376..511), update `canvas-window` first.
+2. **Update Reader in `canvas-wasi`**:
+   - Update imports and reads in `src/host/graphics-imports.js`.
+3. **Update Tests & Verification**:
    - Run `npm test`.
 
-### 5.3 Modifying Window UI or Popup Handling
+### 6.3 Modifying Window UI or Popup Handling
 
-1. **DOM Container**:
-   - HTML structure is generated in `GraphicsWindowUI.prototype.initDOM()`.
-   - Ensure IDs remain consistent (`#graphics-window`, `#graphics-canvas`, `#btn-graphics-popout`, `#btn-graphics-min`, `#btn-graphics-close`).
-2. **Styles**:
-   - Update `src/ui/style.css`.
-3. **Popup Window**:
-   - Managed in `popOut()` and `dockBack()`.
-   - Remember to rebind `inputCoordinator.attachListeners()` when switching between in-page canvas and popup window.
+1. **Managed by `canvas-window`**:
+   - The floating draggable window (`CanvasWindow` / `GraphicsWindowUI`), pop-out window (`window.open`), dock-back restoration, and styles are provided by `canvas-window`.
+   - Any modifications to the UI structure or styles must be made in `canvas-window`.
 
 ---
 
-## 6. Pre-Commit / Pre-Completion Checklist
+## 7. Pre-Commit / Pre-Completion Checklist
 
 Before completing tasks or submitting PRs, verify:
 
+- [ ] Specification updated in `SPEC.md` and confirmed by the developer prior to code changes.
+- [ ] Implementation strictly conforms to the confirmed `SPEC.md`.
 - [ ] `node test/canvas-wasi.test.js` passes with zero errors.
 - [ ] Header parity verified: `include/` headers match `src/headers.js`.
-- [ ] No new npm runtime dependencies introduced.
-- [ ] `types/index.d.ts` reflects any newly added or modified methods and options.
-- [ ] Documentation (`README.md`, `SPEC.md`, `AGENTS.md`, `docs/`) is kept synchronized with code changes.
+- [ ] Developer has conducted manual verification via `npm run demo` (`examples/demo.html`).
+- [ ] Document alignment (`README.md`, `types/index.d.ts`, `docs/`, etc.) performed upon explicit developer instruction.
+- [ ] Git commit performed only when explicitly instructed by the developer.
+- [ ] Zero external C linker flags maintained (`gcc app.c` / `clang app.c` compiles without `-l...`).
+

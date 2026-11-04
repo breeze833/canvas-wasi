@@ -1,5 +1,15 @@
 // canvas-wasi: WebAssembly Host Import Provider for Graphics and 2D Canvas
 
+import {
+  OFF_SHOULD_CLOSE,
+  OFF_MOUSE_X,
+  OFF_MOUSE_Y,
+  OFF_MOUSE_WHEEL_Y,
+  OFF_MOUSE_BUTTONS,
+  OFF_KEYS_DOWN,
+  OFF_FRAME_SYNC
+} from 'canvas-window/protocol';
+
 export function createGraphicsImports(options = {}) {
   const getMemory = typeof options.getMemory === 'function' ? options.getMemory : () => options.memory || null;
   const sharedBuffer = options.sharedBuffer || null;
@@ -141,7 +151,7 @@ export function createGraphicsImports(options = {}) {
       const waitMs = Math.max(1, Math.floor(targetDelta - elapsed));
 
       if (sharedBuffer && typeof Atomics !== 'undefined') {
-        const syncWord = new Int32Array(sharedBuffer, 372, 1);
+        const syncWord = new Int32Array(sharedBuffer, OFF_FRAME_SYNC, 1);
         Atomics.wait(syncWord, 0, 0, Math.min(waitMs, 50));
       }
       lastFrameTime = performance.now();
@@ -150,7 +160,7 @@ export function createGraphicsImports(options = {}) {
     graphics_should_close: () => {
       if (sharedBuffer) {
         const v = new DataView(sharedBuffer);
-        return v.getInt32(20, true) !== 0 ? 1 : 0;
+        return v.getInt32(OFF_SHOULD_CLOSE, true) !== 0 ? 1 : 0;
       }
       if (inputCoordinator) {
         return inputCoordinator.shouldClose ? 1 : 0;
@@ -170,10 +180,10 @@ export function createGraphicsImports(options = {}) {
 
       if (sharedBuffer) {
         const v = new DataView(sharedBuffer);
-        mx = Math.round(v.getFloat32(24, true));
-        my = Math.round(v.getFloat32(28, true));
-        wheel = Math.round(v.getFloat32(36, true));
-        btn = v.getUint32(40, true);
+        mx = Math.round(v.getFloat32(OFF_MOUSE_X, true));
+        my = Math.round(v.getFloat32(OFF_MOUSE_Y, true));
+        wheel = Math.round(v.getFloat32(OFF_MOUSE_WHEEL_Y, true));
+        btn = v.getUint32(OFF_MOUSE_BUTTONS, true);
       } else if (inputCoordinator) {
         mx = Math.round(inputCoordinator.mouseX);
         my = Math.round(inputCoordinator.mouseY);
@@ -201,7 +211,7 @@ export function createGraphicsImports(options = {}) {
         const v = new DataView(sharedBuffer);
         const word = Math.floor(key / 32);
         const bit = key % 32;
-        const wordVal = v.getUint32(44 + word * 4, true);
+        const wordVal = v.getUint32(OFF_KEYS_DOWN + word * 4, true);
         return ((wordVal >>> bit) & 1) ? 1 : 0;
       }
       if (inputCoordinator && key >= 0 && key < 512) {

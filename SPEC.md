@@ -1,24 +1,25 @@
 # SPEC.md: Technical Specification for `canvas-wasi`
 
-`canvas-wasi` is a zero-dependency, modular C graphics and windowing subsystem for WebAssembly and WASI runtimes in the browser. It provides:
+`canvas-wasi` is a modular C graphics and windowing subsystem for WebAssembly and WASI runtimes in the browser, powered by `canvas-window`. It provides:
 1. Direct software framebuffer pixel manipulation (`<graphics.h>`).
 2. Hardware-accelerated HTML5 Canvas 2D vector primitives (`<graphics_canvas.h>`).
-3. Low-latency synchronous mouse/keyboard input via a 512-byte `SharedArrayBuffer` memory protocol or fallback event listener routing.
-4. An interactive draggable, resizable, minimizable, and pop-out floating window UI.
+3. Low-latency synchronous mouse/keyboard input via the standardized 512-byte `SharedArrayBuffer` memory protocol from `canvas-window` or fallback event listener routing.
+4. An interactive draggable, resizable, minimizable, and pop-out floating window UI provided by `canvas-window`.
+5. Zero external C linker flags: user C/C++ applications compile directly without extra libraries.
 
 ---
 
 ## 1. Architecture Overview
 
-`canvas-wasi` operates on a decoupled multi-tier architecture separating the user interface, the input coordinator, the execution runtime (Web Worker or main thread), and the compiled C/C++ WebAssembly instance.
+`canvas-wasi` operates on a decoupled multi-tier architecture separating the user interface and input coordinator (powered by `canvas-window`), the execution runtime (Web Worker or main thread), and the compiled C/C++ WebAssembly instance.
 
 ```
 ┌────────────────────────────────────────────────────────────────────────┐
 │                        Main Browser Thread                             │
 │                                                                        │
 │   ┌───────────────────────────┐      ┌──────────────────────────────┐  │
-│   │     GraphicsWindowUI      │      │       InputCoordinator       │  │
-│   │                           │      │                              │  │
+│   │CanvasWindow / GraphicsWin │      │       InputCoordinator       │  │
+│   │(from canvas-window)       │      │(from canvas-window)          │  │
 │   │  - In-Page Floating Window│      │  - DOM Mouse/Wheel Listeners │  │
 │   │  - External Popup Window  │◄────►│  - DOM Keyboard Keymap       │  │
 │   │  - ImageBitmap Renderer   │      │  - Touch Coordinates         │  │
@@ -291,10 +292,10 @@ imports.handleInputEvent({ type: 'keydown', key: 32 });
 
 ## 5. User Interface & Window Management
 
-`GraphicsWindowUI` manages an interactive floating, draggable in-page window with pop-out window capabilities.
+`CanvasWindow` (aliased as `GraphicsWindowUI`) is provided by `canvas-window`. It manages an interactive floating, draggable in-page window with pop-out window capabilities.
 
 ### 5.1 DOM Hierarchy
-When instantiated, `GraphicsWindowUI` creates `#graphics-window`:
+When instantiated, `CanvasWindow` creates `#graphics-window`:
 ```html
 <div id="graphics-window" class="graphics-window">
   <div class="graphics-header" id="graphics-header">
@@ -340,7 +341,7 @@ The package defines standard subpath exports in `package.json`:
 
 | Subpath | Target | Purpose |
 |---|---|---|
-| `canvas-wasi` (`.`) | `./src/index.js` | Main package entry: `GraphicsWindowUI`, `InputCoordinator`, `DOM_KEY_MAP`, `createGraphicsImports`, `GRAPHICS_H`, `GRAPHICS_CANVAS_H` |
+| `canvas-wasi` (`.`) | `./src/index.js` | Main package entry: `CanvasWindow`, `GraphicsWindowUI`, `InputCoordinator`, `DOM_KEY_MAP`, protocol constants, `createGraphicsImports`, `GRAPHICS_H`, `GRAPHICS_CANVAS_H` |
 | `canvas-wasi/worker` (`./worker`) | `./src/worker.js` | Worker entry: lightweight `createGraphicsImports` |
 | `canvas-wasi/headers` (`./headers`) | `./src/headers.js` | C header string constants (`GRAPHICS_H`, `GRAPHICS_CANVAS_H`) for browser virtual filesystems |
 | `canvas-wasi/style.css` (`./style.css`) | `./src/ui/style.css` | Stylesheet for the floating window component |
@@ -350,9 +351,9 @@ The package defines standard subpath exports in `package.json`:
 ## 7. TypeScript Support
 
 Strict TypeScript declaration files are provided at `types/index.d.ts` covering:
-- `GraphicsWindowUI` & `GraphicsWindowUIOptions`
-- `InputCoordinator` & `InputCoordinatorOptions`
-- `DOM_KEY_MAP`
+- `CanvasWindow`, `CanvasWindowOptions`, `GraphicsWindowUI`, & `GraphicsWindowUIOptions` (from `canvas-window`)
+- `InputCoordinator` & `InputCoordinatorOptions` (from `canvas-window`)
+- `DOM_KEY_MAP` and protocol constants (from `canvas-window`)
 - `createGraphicsImports`, `CreateGraphicsImportsOptions`, & `GraphicsImportsResult`
 - Header string constants `GRAPHICS_H` and `GRAPHICS_CANVAS_H`
 

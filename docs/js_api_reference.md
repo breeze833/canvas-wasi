@@ -39,7 +39,7 @@ This document provides a comprehensive reference for the JavaScript and TypeScri
 
 | Import Path | Exported Symbols | Purpose |
 |---|---|---|
-| `canvas-wasi` | `GraphicsWindowUI`, `InputCoordinator`, `DOM_KEY_MAP`, `createGraphicsImports`, `GRAPHICS_H`, `GRAPHICS_CANVAS_H` | Main package bundle containing frontend UI, input, imports, and headers |
+| `canvas-wasi` | `CanvasWindow`, `GraphicsWindowUI`, `InputCoordinator`, `DOM_KEY_MAP`, `createGraphicsImports`, `GRAPHICS_H`, `GRAPHICS_CANVAS_H` | Main package bundle containing frontend UI & input (powered by `canvas-window`), host imports, and headers |
 | `canvas-wasi/worker` | `createGraphicsImports` | Lightweight export tailored for Web Workers (zero DOM dependencies) |
 | `canvas-wasi/headers` | `GRAPHICS_H`, `GRAPHICS_CANVAS_H` | Virtual C header strings for browser virtual filesystems (e.g. `wasm-c-ide`) |
 | `canvas-wasi/style.css` | N/A (CSS stylesheet) | Default dark-themed styles for the floating canvas window |

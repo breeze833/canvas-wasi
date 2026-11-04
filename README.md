@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-Zero-dependency HTML5 Canvas and software framebuffer graphics bridge for WebAssembly & WASI applications in the browser.
+HTML5 Canvas and software framebuffer graphics bridge for WebAssembly & WASI applications in the browser, powered by `canvas-window`.
 
 `canvas-wasi` enables compiled C/C++ programs to render directly to HTML5 Canvas elements with low latency, synchronous input coordination, and an interactive floating/pop-out window UI.
 
@@ -16,8 +16,8 @@ For complete architectural details, C API signatures, and SharedArrayBuffer memo
 - 🎨 **HTML5 Canvas 2D Vector Primitives (`<graphics_canvas.h>`)**: High-performance path drawing (`arc`, `line_to`, `fill`), transformations, text, and styles backed by `CanvasRenderingContext2D` with canvas state preservation.
 - 🖼️ **Dual Presentation Pipeline**: Zero-copy hardware-accelerated `ImageBitmap` presentation via `bitmaprenderer` and fallback transferable array buffer rendering.
 - ⚡ **Zero-Latency Synchronous Input**: 512-byte `SharedArrayBuffer` memory layout with Atomics frame pacing for mouse coordinates, buttons, wheel, and key states.
-- 🪟 **Interactive Window Controller**: Floating, draggable in-page window with pop-out support (`window.open`), dock back, minimize, resolution badge, and real-time FPS counter.
-- 🚀 **Zero External Dependencies**: Pure vanilla JavaScript/ES modules and standard C headers without linker dependencies.
+- 🪟 **Interactive Window Controller**: Floating, draggable in-page window with pop-out support (`window.open`), dock back, minimize, resolution badge, and real-time FPS counter powered by `canvas-window`.
+- 🚀 **Zero External C Linker Flags**: Standard C headers (`<graphics.h>`, `<graphics_canvas.h>`) directly satisfied by host imports without extra linker flags.
 
 ---
 

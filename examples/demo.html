@@ -4,6 +4,16 @@
   <meta charset="UTF-8">
   <title>canvas-wasi Standalone Demo</title>
   <link rel="stylesheet" href="../src/ui/style.css">
+  <script type="importmap">
+  {
+    "imports": {
+      "canvas-window": "/node_modules/canvas-window/src/index.js",
+      "canvas-window/protocol": "/node_modules/canvas-window/src/protocol.js",
+      "canvas-window/window": "/node_modules/canvas-window/src/ui/canvas-window.js",
+      "canvas-window/input": "/node_modules/canvas-window/src/input/input-coordinator.js"
+    }
+  }
+  </script>
   <style>
     body {
       margin: 0;

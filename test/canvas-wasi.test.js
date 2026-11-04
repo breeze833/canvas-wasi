@@ -12,9 +12,13 @@ import {
 } from '../src/headers.js';
 
 import {
+  CanvasWindow,
+  GraphicsWindowUI,
   InputCoordinator,
-  DOM_KEY_MAP
-} from '../src/input/input-coordinator.js';
+  DOM_KEY_MAP,
+  INPUT_BUFFER_SIZE,
+  OFF_MOUSE_X
+} from '../src/index.js';
 
 import {
   createGraphicsImports
@@ -69,7 +73,11 @@ const expectedCanvasFuncs = [
 for (const fn of expectedCanvasFuncs) {
   assert.strictEqual(GRAPHICS_CANVAS_H.includes(fn), true, `graphics_canvas.h must declare ${fn}`);
 }
-console.log('✓ C headers and string constants verified');
+assert.strictEqual(typeof CanvasWindow, 'function', 'CanvasWindow must be exported');
+assert.strictEqual(GraphicsWindowUI, CanvasWindow, 'GraphicsWindowUI must be alias of CanvasWindow');
+assert.strictEqual(INPUT_BUFFER_SIZE, 512, 'INPUT_BUFFER_SIZE must be 512');
+assert.strictEqual(OFF_MOUSE_X, 24, 'OFF_MOUSE_X must be 24');
+console.log('✓ C headers, string constants, and canvas-window re-exports verified');
 
 // Test 2: InputCoordinator and SharedArrayBuffer Synchronization
 const sharedBuf = new SharedArrayBuffer(512);
@@ -270,9 +278,10 @@ globalThis.document = {
   createElement(tag) { return createMockEl(tag); }
 };
 
-const { GraphicsWindowUI } = await import('../src/ui/graphics-window.js');
+const { GraphicsWindowUI: DynamicWindowUI } = await import('../src/ui/graphics-window.js');
+assert.strictEqual(DynamicWindowUI, GraphicsWindowUI, 'Dynamic import must match top-level GraphicsWindowUI');
 const focusEvents = [];
-const win = new GraphicsWindowUI({
+const win = new DynamicWindowUI({
   width: 640,
   height: 480,
   title: 'Test Window',

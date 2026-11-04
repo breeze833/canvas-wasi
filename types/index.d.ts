@@ -1,75 +1,39 @@
 // Type definitions for canvas-wasi
 
-export interface GraphicsWindowUIOptions {
-  width?: number;
-  height?: number;
-  title?: string;
-  onCloseRequested?: () => void;
-  onFocusChange?: (focused: boolean) => void;
-  onFrameActivity?: (active: boolean) => void;
-  sharedBuffer?: SharedArrayBuffer | null;
-  inputCoordinator?: InputCoordinator | null;
-}
+export {
+  CanvasWindow,
+  CanvasWindowOptions,
+  GraphicsWindowUI,
+  GraphicsWindowUIOptions,
+  InputCoordinator,
+  InputCoordinatorOptions,
+  DOM_KEY_MAP,
+  INPUT_BUFFER_SIZE,
+  INPUT_LAYOUT_OFFSETS,
+  OFF_WINDOW_WIDTH,
+  OFF_WINDOW_HEIGHT,
+  OFF_RENDER_WIDTH,
+  OFF_RENDER_HEIGHT,
+  OFF_DPI_SCALE,
+  OFF_SHOULD_CLOSE,
+  OFF_MOUSE_X,
+  OFF_MOUSE_Y,
+  OFF_MOUSE_WHEEL_X,
+  OFF_MOUSE_WHEEL_Y,
+  OFF_MOUSE_BUTTONS,
+  OFF_KEYS_DOWN,
+  OFF_KEY_PRESSED_COUNT,
+  OFF_KEY_PRESSED_QUEUE,
+  OFF_CHAR_PRESSED_COUNT,
+  OFF_CHAR_PRESSED_QUEUE,
+  OFF_FRAME_SYNC,
+  OFF_RESERVED,
+  MOUSE_BUTTON_LEFT,
+  MOUSE_BUTTON_RIGHT,
+  MOUSE_BUTTON_MIDDLE
+} from 'canvas-window';
 
-export class GraphicsWindowUI {
-  constructor(options?: GraphicsWindowUIOptions);
-  width: number;
-  height: number;
-  title: string;
-  isPoppedOut: boolean;
-  isMinimized: boolean;
-  open(width?: number, height?: number, title?: string): void;
-  close(): void;
-  focus(): void;
-  show(): void;
-  hide(): void;
-  toggle(): void;
-  toggleMinimize(): void;
-  togglePopOut(): void;
-  dockBack(): void;
-  isOpen(): boolean;
-  isCanvasVisible(): boolean;
-  renderBitmap(bitmap: ImageBitmap): void;
-  renderFrame(bitmap: ImageBitmap): void;
-  renderFrameBuffer(buffer: ArrayBuffer | ArrayBufferView, width: number, height: number): void;
-  updateFps(fps: number): void;
-  updateFPS(fps: number): void;
-  setInputCoordinator(inputCoordinator: InputCoordinator): void;
-  setActivity(active: boolean): void;
-  clearActivity(): void;
-}
-
-export interface InputCoordinatorOptions {
-  sharedBuffer?: SharedArrayBuffer | null;
-  canvas?: HTMLCanvasElement | null;
-  width?: number;
-  height?: number;
-  dpiScale?: number;
-}
-
-export class InputCoordinator {
-  constructor(options?: InputCoordinatorOptions);
-  windowWidth: number;
-  windowHeight: number;
-  renderWidth: number;
-  renderHeight: number;
-  dpiScale: number;
-  shouldClose: boolean;
-  mouseX: number;
-  mouseY: number;
-  mouseButtons: number;
-  mouseWheelX: number;
-  mouseWheelY: number;
-  keysDown: Uint32Array;
-  attachListeners(canvas: HTMLCanvasElement, windowTarget?: Window | null): void;
-  detach(): void;
-  reset(): void;
-  updateSharedState(): void;
-  pollToWasm(destPtr: number, mem: WebAssembly.Memory): void;
-  addListener(fn: (event: any) => void): () => void;
-}
-
-export const DOM_KEY_MAP: Record<string, number>;
+import type { InputCoordinator } from 'canvas-window';
 
 export interface CreateGraphicsImportsOptions {
   getMemory?: () => WebAssembly.Memory | null;

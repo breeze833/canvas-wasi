@@ -1,6 +1,6 @@
 # canvas-wasi Documentation
 
-Welcome to the documentation suite for `canvas-wasi`: a zero-dependency graphics and windowing bridge for WebAssembly and WASI runtimes in the browser.
+Welcome to the documentation suite for `canvas-wasi`: a graphics and windowing bridge for WebAssembly and WASI runtimes in the browser, powered by `canvas-window`.
 
 ---
 
@@ -9,7 +9,7 @@ Welcome to the documentation suite for `canvas-wasi`: a zero-dependency graphics
 | Document | Target Audience | Description |
 |---|---|---|
 | **[C API Reference](c_api_reference.md)** | C & C++ Developers | Complete reference for `<graphics.h>` (software framebuffer) and `<graphics_canvas.h>` (HTML5 Canvas 2D vector primitives), pixel formats, input queries, and frame pacing. |
-| **[JavaScript & TypeScript Host API Reference](js_api_reference.md)** | Web Integrators & Frontend Developers | API reference for `GraphicsWindowUI`, `InputCoordinator`, `createGraphicsImports`, `DOM_KEY_MAP`, and virtual header constants. |
+| **[JavaScript & TypeScript Host API Reference](js_api_reference.md)** | Web Integrators & Frontend Developers | API reference for `CanvasWindow`, `GraphicsWindowUI`, `InputCoordinator`, `createGraphicsImports`, `DOM_KEY_MAP`, and virtual header constants. |
 | **[Integration & Architecture Guide](integration_guide.md)** | Systems & Web Developers | End-to-end integration walkthrough covering Clang compilation (`wasm32-wasi`), Web Worker setup, Cross-Origin Isolation (COOP/COEP), and Web IDE integration. |
 | **[Technical Specification](../SPEC.md)** | Systems Architects & Contributors | Formal specification including 512-byte `SharedArrayBuffer` memory layout, Atomics frame pacing protocol, and clone canvas preservation. |
 | **[Developer & Agent Guidelines](../AGENTS.md)** | Contributors & AI Agents | Coding conventions, core design invariants, verification checklists, and maintenance procedures. |
@@ -18,15 +18,15 @@ Welcome to the documentation suite for `canvas-wasi`: a zero-dependency graphics
 
 ## Architectural Overview
 
-`canvas-wasi` bridges compiled C/C++ WebAssembly code and the browser DOM using a decoupled multi-tier architecture:
+`canvas-wasi` bridges compiled C/C++ WebAssembly code and the browser DOM using a decoupled multi-tier architecture, delegating display and input to `canvas-window`:
 
 ```
 ┌────────────────────────────────────────────────────────────────────────┐
 │                        Main Browser Thread                             │
 │                                                                        │
 │   ┌───────────────────────────┐      ┌──────────────────────────────┐  │
-│   │     GraphicsWindowUI      │      │       InputCoordinator       │  │
-│   │                           │      │                              │  │
+│   │CanvasWindow / GraphicsWin │      │       InputCoordinator       │  │
+│   │(from canvas-window)       │      │(from canvas-window)          │  │
 │   │  - Floating Draggable UI  │◄────►│  - Mouse/Wheel/Keys Listeners│  │
 │   │  - Detached External Popup│      │  - DPI & Coordinate Scaling  │  │
 │   │  - ImageBitmap Renderer   │      │  - ShouldClose State         │  │

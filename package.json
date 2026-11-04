@@ -1,7 +1,10 @@
 {
   "name": "canvas-wasi",
-  "version": "0.1.2",
-  "description": "Zero-dependency HTML5 Canvas and software framebuffer graphics bridge for WebAssembly & WASI",
+  "version": "0.1.3",
+  "description": "HTML5 Canvas and software framebuffer graphics bridge for WebAssembly & WASI, powered by canvas-window",
+  "dependencies": {
+    "canvas-window": "github:breeze833/canvas-window"
+  },
   "type": "module",
   "main": "./src/index.js",
   "types": "./types/index.d.ts",
