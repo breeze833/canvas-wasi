@@ -24,6 +24,9 @@ jobs:
         with:
           node-version: 20
 
+      - name: Install dependencies
+        run: npm ci
+
       - name: Run tests
         run: node test/canvas-wasi.test.js
 
@@ -31,7 +34,7 @@ jobs:
     name: Package & Release
     runs-on: ubuntu-latest
     needs: test
-    if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/'))
+    if: startsWith(github.ref, 'refs/tags/v')
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -40,6 +43,9 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
+
+      - name: Install dependencies
+        run: npm ci
 
       - name: Create release archives
         run: |
@@ -50,16 +56,16 @@ jobs:
       - name: Create or Update GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'latest' }}
-          name: ${{ startsWith(github.ref, 'refs/tags/') && format('Release {0}', github.ref_name) || 'Latest Build' }}
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
           body: |
-            ### canvas-wasi Package Release
+            ### canvas-wasi ${{ github.ref_name }}
 
-            Automated package build from commit `${{ github.sha }}`.
+            Automated package release for `${{ github.ref_name }}`.
 
             #### Installation
             ```bash
-            npm install github:breeze833/canvas-wasi
+            npm install github:breeze833/canvas-wasi#${{ github.ref_name }}
             ```
 
             #### Assets
@@ -70,5 +76,5 @@ jobs:
             canvas-wasi.tar.gz
             canvas-wasi.zip
             canvas-wasi-*.tgz
-          make_latest: ${{ startsWith(github.ref, 'refs/tags/') && 'true' || 'legacy' }}
+          make_latest: true
           target_commitish: ${{ github.sha }}
